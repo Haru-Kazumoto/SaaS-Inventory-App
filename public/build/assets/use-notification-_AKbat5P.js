@@ -1,0 +1,1 @@
+import{n as i}from"./AuthenticatedLayout-BTckyErK.js";import{U as n}from"./_plugin-vue_export-helper-CKmY-Myo.js";import{x as t}from"./app-_XiQOCxR.js";function e(){const o=t(i,null);return o===null&&n("use-notification","No outer `n-notification-provider` found."),o}export{e as u};

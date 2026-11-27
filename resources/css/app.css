@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * @tailwindcss/forms memberi border, padding & focus ring ke semua <input>.
+ * Input internal Naive UI (mis. NSelect `filterable`, NSelect `multiple`,
+ * NDatePicker, NInputNumber) ikut kena sehingga muncul border ganda.
+ * Reset hanya untuk elemen milik Naive UI; border tetap dari komponen Naive.
+ */
+.n-base-selection-input,
+.n-base-selection-input:focus,
+.n-base-selection-input-tag__input,
+.n-base-selection-input-tag__input:focus,
+.n-input__input-el,
+.n-input__input-el:focus,
+.n-input__textarea-el,
+.n-input__textarea-el:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+    background-color: transparent;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+}

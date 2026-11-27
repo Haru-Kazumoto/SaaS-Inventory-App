@@ -1,0 +1,44 @@
+INVENTORY REVISIONS AND NEW FEATURE :
+
+
+TODO TODAY:
+
+
+task done:
+- [VERY VERY MAJOR] mencetak keluar dan masuk barang ( bukan peminjaman ) ke dalam excel sesuai format yang sudah ada saat ini. [DONE]
+- [MAJOR] membuat fitur halaman khusus di superadmin untuk mengambil data barang yang OFF atau keluar gudang dari admin ( PER JURUSAN ) [DONE]
+- [MAJOR] membuat fitur export data untuk mengambil data barang yang OFF atau keluar gudang di admin [DONE]
+- [MAJOR] membuat fitur halaman sendiri untuk menangkap log pengeluaran quantity barang dari yang habis pakai, [DONE]
+- [MAJOR] mengubah logika dari peminjaman barang sesuai tabel baru ( products ). [DONE]
+- [MAJOR] membuat halaman re-stock sebagai halaman khusus dari sub-menu manajemen barang ( habis dan tidak habis pakai ). [DONE]
+- [MAJOR] membuat fitur re-stock barang dan akan tercetak sebagai masuk barang , 
+  dan Ketika barang dipakai (habis pakai)maka tercetak barang keluar dibulan itu. [done]
+- [MAJOR] data master satuan Barang, dan sub Barang [done]
+- [MAJOR] membuat fitur data master untuk sub kategori. [DONE]
+- [MAJOR] barang tidak habis pakai harus ada base quantitynya juga karna kode barang bisa sama. [done]
+- [VERY VERY MAJOR] struktur database barang diubah sepenuhnya, sekarang berdasarkan dari barang yang mana mempunyai quantity nya masing masing per barang, 
+  bukan per partial, contoh: [done]
+- [MAJOR] membuat halaman khusus untuk data barang restock [DONE]
+- [MAJOR] di superadmin tambahkan statistic juga sebagai rekapan : 
+ + barang masuk dan keluar ( re-stock ) 
+ + barang pengajuan 
+
+- [MINOR] menambahkan informasi summary di dashboard admin yaitu : [done]
+  + jumlah barang re-stock dan keluar per bulan 
+- [MINOR] informasi summary total pengajuan barang sesuaikan dengan data yang benar. [DONE]
+- [MINOR] mengganti akses export data barang yang sebelumnya admin bisa, sekarang hanya superadmin yang dapat mengexportnya dikarenakan excel dapat diedit. [DONE]
+
+| Fitur                                                                       | Level           |  Estimasi   |
+| --------------------------------------------------------------------------- | --------------- | ----------: |
+| Perubahan total struktur database barang (quantity per item, bukan partial) | VERY VERY MAJOR | Rp1.000.000 |
+| Penyesuaian logika peminjaman mengikuti tabel products baru                 | MAJOR           | Rp450.000   |
+| Sistem re-stock barang + integrasi barang masuk/keluar otomatis             | MAJOR           | Rp550.000   |
+| Export Excel barang masuk & keluar sesuai format existing                   | VERY VERY MAJOR | Rp550.000   |
+| Halaman khusus superadmin untuk barang OFF/keluar per jurusan               | MAJOR           | Rp300.000   |
+| Export data barang OFF/keluar                                               | MAJOR           | Rp200.000   |
+| Halaman log pengeluaran quantity barang habis pakai                         | MAJOR           | Rp300.000   |
+| Halaman khusus data barang re-stock                                         | MAJOR           | Rp200.000   |
+| Master data satuan barang & sub barang                                      | MAJOR           | Rp250.000   |
+| Master data sub kategori                                                    | MAJOR           | Rp200.000   |
+| Penyesuaian base quantity barang tidak habis pakai                          | MAJOR           | Rp200.000   |
+| Statistik superadmin (barang masuk/keluar + pengajuan)                      | MAJOR           | Rp200.000   |
