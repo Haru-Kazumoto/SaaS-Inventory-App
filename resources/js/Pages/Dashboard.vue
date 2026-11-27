@@ -200,7 +200,7 @@ export default defineComponent({
     setup(props) {
         const page = usePage();
         const userName = page.props.auth.user.fullname;
-        const majorName = page.props.auth.user.major?.name ?? null;
+        const majorName = ((page.props as any).units ?? []).map((u: { name: string }) => u.name).join(" · ") || null;
         const borrowingHref = route("borrowing.index");
 
         const todayLabel = new Intl.DateTimeFormat("id-ID", {
@@ -224,7 +224,7 @@ export default defineComponent({
             },
             {
                 label: "Ajukan Barang",
-                href: route("request-item.create"),
+                href: route("procurement.create"),
                 icon: BoxMultiple24Regular,
             },
         ];
@@ -255,7 +255,7 @@ export default defineComponent({
                 title: "Pengajuan Barang",
                 total: props.count.total_request,
                 unit: "pengajuan",
-                href: route("request-item.index"),
+                href: route("procurement.index"),
                 icon_title: BoxMultiple24Regular,
                 icon_status: Warning20Regular,
                 title_status: "Menunggu persetujuan",

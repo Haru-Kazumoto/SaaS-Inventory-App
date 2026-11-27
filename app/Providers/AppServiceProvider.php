@@ -13,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Konteks tenant: satu instance per request / job (di-reset otomatis).
+        $this->app->scoped(\App\Domain\Organization\Support\OrganizationContext::class);
     }
 
     /**

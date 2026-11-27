@@ -1,19 +1,25 @@
-/** Helper tampilan pengguna (role & avatar) */
+/** Helper tampilan anggota (peran organisasi & unit) */
 
-export function roleLabel(name?: string | null) {
-    if (!name) return "-";
-    if (name === "SUPERADMIN") return "Superadmin";
-    if (name.startsWith("ADMIN_")) return `Admin ${name.slice(6)}`;
-    return name.replace(/_/g, " ");
+export const ORG_ROLE_LABEL: Record<string, string> = {
+    owner: "Pemilik",
+    admin: "Admin organisasi",
+    member: "Anggota",
+};
+
+export const UNIT_ROLE_LABEL: Record<string, string> = {
+    admin: "Admin",
+    staff: "Staf",
+    viewer: "Viewer",
+};
+
+export function roleLabel(role?: string | null) {
+    return role ? (ORG_ROLE_LABEL[role] ?? role) : "-";
 }
 
-/** Jurusan yang tersirat dari nama role, mis. ADMIN_TJKT → TJKT */
-export function majorFromRole(name?: string | null) {
-    return name?.startsWith("ADMIN_") ? name.slice(6) : null;
-}
-
-export function roleBadgeClass(name?: string | null) {
-    return name === "SUPERADMIN"
+export function roleBadgeClass(role?: string | null) {
+    return role === "owner"
         ? "border-[#2A126C] bg-[#2A126C] text-white"
-        : "border-[#2A126C]/15 bg-[#2A126C]/[0.05] text-[#2A126C]";
+        : role === "admin"
+          ? "border-[#2A126C]/30 bg-[#2A126C]/[0.08] text-[#2A126C]"
+          : "border-slate-200 bg-slate-50 text-slate-600";
 }

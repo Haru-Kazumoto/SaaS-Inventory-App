@@ -1,251 +1,98 @@
-import { Link } from "@inertiajs/vue3";
-import { ArrowSwap24Regular, BoxDismiss20Regular, BoxMultiple24Regular, BoxToolbox24Regular, Bug24Regular, DatabaseLink24Regular, Home24Regular, ArrowNext20Regular, MailInboxAll24Regular, PeopleSettings20Regular, ReceiptAdd20Regular, Settings24Regular, TableStackLeft24Regular, TrayItemRemove24Filled, DocumentToolbox24Regular, MailInboxAdd20Regular, ArrowSort20Regular, ArrowTrendingLines20Filled, ArrowStepInRight16Regular, BoxArrowUp24Regular } from "@vicons/fluent";
 import { NIcon } from "naive-ui";
 import { Component, h } from "vue";
-
-function renderLabel(route: string, labelName: string) {
-    return h(Link, { href: route }, { default: () => h('span', null, labelName) });
-}
+import {
+    ArrowStepInRight16Regular,
+    ArrowSwap24Regular,
+    ArrowTrendingLines20Filled,
+    Box20Regular,
+    BoxArrowUp24Regular,
+    BoxDismiss20Regular,
+    BoxToolbox24Regular,
+    BuildingMultiple20Regular,
+    DataPie20Regular,
+    DatabaseLink24Regular,
+    DocumentText20Regular,
+    MailInboxAll24Regular,
+    Organization20Regular,
+    Payment20Regular,
+    People20Regular,
+    PeopleSettings20Regular,
+    Receipt20Regular,
+    Ruler20Regular,
+    TableStackLeft24Regular,
+    Tag20Regular,
+    Vault20Regular,
+} from "@vicons/fluent";
 
 function renderIcon(icon: Component) {
-    return () => h(NIcon, null, { default: () => h(icon) })
+    return () => h(NIcon, null, { default: () => h(icon) });
 }
 
-export const menuOptions = {
-    SUPER: [
-        {
-            label: "Dashboard",
-            key: "dashboard",
-            icon: renderIcon(TableStackLeft24Regular),
-            href: '/dashboard/superadmin'
-        },
-        // {
-        //     label: "Daftar Barang Dipinjam",
-        //     key: "list-items",
-        //     icon: renderIcon(BoxDismiss20Regular),
-        //     href: "/transactions/items"
-        // },
-        // {
-        //     label: "Log Peminjaman",
-        //     key: "transactions",
-        //     icon: renderIcon(ReceiptAdd20Regular),
-        //     href: '/transactions',
-        // },
-        {
-            label: "Daftar Barang Gudang",
-            key: "item-data",
-            icon: renderIcon(BoxMultiple24Regular),
-            children: [
-                {
-                    label: "Gudang TJKT",
-                    icon: renderIcon(ArrowNext20Regular),
-                    key: "tjkt-items",
-                    href: '/products/tjkt',
-                },
-                {
-                    label: "Gudang TO",
-                    icon: renderIcon(ArrowNext20Regular),
-                    key: "to-items",
-                    href: '/products/to',
-                },
-                {
-                    label: "Gudang TE",
-                    icon: renderIcon(ArrowNext20Regular),
-                    key: "te-items",
-                    href: '/products/te',
-                },
-                {
-                    label: "Gudang AK",
-                    icon: renderIcon(ArrowNext20Regular),
-                    key: "ak-items",
-                    href: '/products/ak',
-                },
-                {
-                    label: "Gudang TU",
-                    icon: renderIcon(ArrowNext20Regular),
-                    key: "tu-items",
-                    href: '/products/tu',
-                },
-                {
-                    label: "Gudang KKPI",
-                    icon: renderIcon(ArrowNext20Regular),
-                    key: "kkpi-warehouseitems",
-                    href: '/products/kkpi',
-                }
-            ]
-        },
+export interface MenuTerms {
+    unit: string;
+    unit_plural: string;
+}
+
+/**
+ * Menu sidebar per peran. Kode peran dari auth.user.role.code:
+ * DEVELOPER = pengelola platform, SUPER = admin organisasi, ADMIN = anggota unit.
+ * Label unit mengikuti terminologi organisasi (Jurusan / Divisi / ...).
+ */
+export function menuFor(code: string | undefined, terms: MenuTerms) {
+    if (code === "DEVELOPER") return platformMenu;
+
+    const isOrgAdmin = code === "SUPER";
+
+    const menu: any[] = [
+        { label: "Dashboard", key: "dashboard", icon: renderIcon(TableStackLeft24Regular), href: "/dashboard" },
+        { label: "Barang", key: "products", icon: renderIcon(MailInboxAll24Regular), href: "/products" },
+        { label: "Peminjaman", key: "borrowing", icon: renderIcon(ArrowSwap24Regular), href: "/borrowing" },
         {
             label: "Pergerakan Barang",
-            key: 'products-line',
+            key: "movements",
             icon: renderIcon(ArrowTrendingLines20Filled),
             children: [
-                {
-                    label: "Tidak Habis Pakai",
-                    key: "durable",
-                    icon: renderIcon(ArrowSwap24Regular),
-                    href: '/lines/durable'
-                },
-                {
-                    label: "Habis Pakai",
-                    key: 'consumable',
-                    icon: renderIcon(ArrowStepInRight16Regular),
-                    href: "/lines/consumable"
-                },
-                {
-                    label: "Barang masuk",
-                    key: 'restock-items',
-                    icon: renderIcon(BoxArrowUp24Regular),
-                    href: '/lines/restocks'
-                }
-            ]
+                { label: "Sedang dipinjam", key: "movements-loaned", icon: renderIcon(ArrowSwap24Regular), href: "/movements/loaned" },
+                { label: "Pemakaian habis pakai", key: "movements-consumed", icon: renderIcon(ArrowStepInRight16Regular), href: "/movements/consumed" },
+                { label: "Barang masuk", key: "movements-restocks", icon: renderIcon(BoxArrowUp24Regular), href: "/movements/restocks" },
+                { label: "Barang dihapuskan", key: "movements-write-offs", icon: renderIcon(BoxDismiss20Regular), href: "/movements/write-offs" },
+            ],
         },
+        { label: "Pengajuan Barang", key: "procurement", icon: renderIcon(BoxToolbox24Regular), href: "/procurement" },
         {
-            label: "Permintaan Barang",
-            key: "item-request",
-            icon: renderIcon(BoxToolbox24Regular),
-            href: "/request-item"
-        },
-        {
-            label: "Manajemen Data Utama",
+            label: "Data Master",
             key: "master-data",
-            icon: renderIcon(Settings24Regular),
-            children: [
-                {
-                    label: "Manajemen Pengguna",
-                    key: "user-management",
-                    icon: renderIcon(PeopleSettings20Regular),
-                    href: "/user",
-                },
-            ]
-        },
-        // {
-        //     label: "Lapor Issue",
-        //     key: "report-bugs",
-        //     icon: renderIcon(Bug24Regular),
-        //     href: "/reports"
-        // }
-    ],
-    ADMIN: [
-        {
-            label: "Dashboard",
-            key: "dashboard",
-            icon: renderIcon(TableStackLeft24Regular),
-            href: '/dashboard'
-        },
-        {
-            label: "Manajemen Barang",
-            key: 'product-management',
-            icon: renderIcon(MailInboxAll24Regular),
-            href: '/products'
-        },
-        {
-            label: "Barang Keluar Masuk",
-            key: 'transactions',
-            icon: renderIcon(ArrowSort20Regular),
-            href: '/borrowing'
-        },
-        {
-            label: "Pergerakan Barang",
-            key: 'products-line',
-            icon: renderIcon(ArrowTrendingLines20Filled),
-            children: [
-                {
-                    label: "Tidak Habis Pakai",
-                    key: "durable",
-                    icon: renderIcon(ArrowSwap24Regular),
-                    href: '/lines/durable'
-                },
-                {
-                    label: "Habis Pakai",
-                    key: 'consumable',
-                    icon: renderIcon(ArrowStepInRight16Regular),
-                    href: "/lines/consumable"
-                },
-                {
-                    label: "Barang masuk",
-                    key: 'restock-items',
-                    icon: renderIcon(BoxArrowUp24Regular),
-                    href: '/lines/restocks'
-                }
-            ]
-        },
-        // {
-        //     label: "Manajemen Barang",
-        //     key: 'item-management',
-        //     icon: renderIcon(MailInboxAll24Regular),
-        //     href: '/item/index'
-        // },
-        // {
-        //     label: "Manajemen Peminjaman",
-        //     key: 'item-transaction',
-        //     icon: renderIcon(ArrowSwap24Regular),
-        //     // href: "/transactions",
-        //     children: [
-        //         {
-        //             label: "Daftar Peminjaman",
-        //             key: "transactions",
-        //             icon: renderIcon(ReceiptAdd20Regular),
-        //             href: '/transactions',
-        //         },
-        //         {
-        //             label: "Daftar Barang Dipinjam",
-        //             key: "list-items",
-        //             icon: renderIcon(BoxDismiss20Regular),
-        //             href: "/transactions/items"
-        //         }
-        //     ]
-        // },
-        {
-            label: "Pengajuan Barang",
-            key: "item-request",
-            icon: renderIcon(BoxToolbox24Regular),
-            href: "/request-item"
-        },
-        {
-            label: "Barang Dihapuskan",
-            key: "item-off",
-            icon: renderIcon(BoxDismiss20Regular),
-            href: "/products/off"
-        },
-        {
-            label: "Manajemen Data",
-            key: 'master-data',
             icon: renderIcon(DatabaseLink24Regular),
             children: [
-                {
-                    label: "Penyimpanan",
-                    key: 'master-data',
-                    icon: renderIcon(Home24Regular),
-                    href: '/warehouse',
-                },
-                {
-                    label: "Sub Kategori Barang",
-                    key: 'subcategory-data',
-                    icon: renderIcon(DocumentToolbox24Regular),
-                    href: '/sub-type',
-                },
-                {
-                    label: "Satuan Barang",
-                    key: 'unit-data',
-                    icon: renderIcon(MailInboxAdd20Regular),
-                    href: '/unit-product',
-                }
-            ]
+                ...(isOrgAdmin
+                    ? [{ label: terms.unit_plural, key: "master-units", icon: renderIcon(Organization20Regular), href: "/master/units" }]
+                    : []),
+                { label: "Penyimpanan", key: "master-warehouses", icon: renderIcon(Vault20Regular), href: "/master/warehouses" },
+                { label: "Kategori", key: "master-categories", icon: renderIcon(Tag20Regular), href: "/master/categories" },
+                { label: "Satuan", key: "master-uoms", icon: renderIcon(Ruler20Regular), href: "/master/uoms" },
+            ],
         },
-        // {
-        //     label: "Lapor Issue",
-        //     key: "report-bugs",
-        //     icon: renderIcon(Bug24Regular),
-        //     href: "/reports"
-        // },
-    ],
-    DEVELOPER: [
-        {
-            label: "Dashboard",
-            key: "dashboard",
-            icon: renderIcon(TableStackLeft24Regular),
-            href: '/dashboard/internal'
-        },
+    ];
 
-    ]
+    if (isOrgAdmin) {
+        menu.push({ label: "Anggota", key: "members", icon: renderIcon(PeopleSettings20Regular), href: "/members" });
+    }
+
+    return menu;
 }
+
+const platformMenu = [
+    { label: "Dashboard", key: "platform-dashboard", icon: renderIcon(DataPie20Regular), href: "/platform" },
+    { label: "Organisasi", key: "platform-organizations", icon: renderIcon(BuildingMultiple20Regular), href: "/platform/organizations" },
+    { label: "Pengguna", key: "platform-users", icon: renderIcon(People20Regular), href: "/platform/users" },
+    {
+        label: "Penagihan",
+        key: "platform-billing",
+        icon: renderIcon(Receipt20Regular),
+        children: [
+            { label: "Tagihan", key: "platform-invoices", icon: renderIcon(DocumentText20Regular), href: "/platform/invoices" },
+            { label: "Pembayaran", key: "platform-payments", icon: renderIcon(Payment20Regular), href: "/platform/payments" },
+            { label: "Paket", key: "platform-plans", icon: renderIcon(Box20Regular), href: "/platform/plans" },
+        ],
+    },
+];

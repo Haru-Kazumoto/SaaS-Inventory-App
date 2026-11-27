@@ -33,17 +33,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Ambil user yang sedang login
-        $user = $request->user();
+        // Pengelola platform → area platform; pengguna organisasi → dashboard (dibedakan per peran di DashboardController)
+        $home = $request->user()->isPlatformAdmin() ? route('platform.dashboard') : route('dashboard');
 
-        // Tentukan redirect berdasarkan role
-        $redirectRoute = match ($user->role->name ?? '') {
-            'SUPERADMIN' => route('dashboard.superadmin'),
-            'DEVELOPER' => route('dashboard.internal'),
-            default => route('dashboard'),
-        };
-
-        return redirect()->intended($redirectRoute);
+        return redirect()->intended($home);
     }
 
 

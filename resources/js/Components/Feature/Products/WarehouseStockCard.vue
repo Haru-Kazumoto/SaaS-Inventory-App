@@ -25,7 +25,7 @@
             </div>
 
             <!-- Action buttons -->
-            <div class="flex items-center gap-2" v-if="!createable">
+            <div class="flex items-center gap-2" v-if="canManage">
                 <n-button
                     type="primary"
                     class="flex-1 sm:flex-none"
@@ -35,7 +35,6 @@
                 </n-button>
 
                 <n-button
-                    v-if="product.type === 'DURABLE'"
                     type="error"
                     ghost
                     class="flex-1 sm:flex-none"
@@ -104,7 +103,7 @@
                                 <span
                                     class="ml-0.5 text-xs font-normal text-slate-400"
                                 >
-                                    {{ product.unit_name }}
+                                    {{ product.uom_name }}
                                 </span>
                             </td>
                         </tr>
@@ -124,39 +123,39 @@
             <!-- Footer info -->
             <div class="mt-4 flex items-center gap-2">
                 <span class="text-xs text-slate-500 font-medium"
-                    >Kepemilikan Jurusan:</span
+                    >Milik {{ t('unit').toLowerCase() }}:</span
                 >
                 <span
                     class="inline-flex items-center rounded border border-[#2A126C]/15 bg-[#2A126C]/[0.05] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#2A126C]"
                 >
-                    {{ product.major_name }}
+                    {{ product.unit_name }}
                 </span>
             </div>
         </div>
     </div>
 
     <!-- Modals -->
-    <RestockModal
+    <StockMoveModal
         v-model:show="showRestock"
+        mode="restock"
         :product-id="product.id"
-        :unit-name="product.unit_name"
+        :uom-name="product.uom_name"
         :warehouses="warehouses"
     />
-
-    <WriteOffModal
-        v-if="product.type === 'DURABLE'"
+    <StockMoveModal
         v-model:show="showWriteOff"
+        mode="writeoff"
         :product-id="product.id"
-        :unit-name="product.unit_name"
+        :uom-name="product.uom_name"
         :warehouses="warehouses"
     />
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useTerms } from "@/Composables/useTerms";
 import { Building24Regular } from "@vicons/fluent";
-import RestockModal from "./RestockModal.vue";
-import WriteOffModal from "./WriteOffModal.vue";
+import StockMoveModal from "./StockMoveModal.vue";
 import type {
     Product,
     WarehouseProduct,
@@ -168,9 +167,10 @@ defineProps<{
     product: Product;
     warehouseProducts: WarehouseProduct[];
     warehouses: Warehouse[];
-    createable: boolean;
+    canManage: boolean;
 }>();
 
+const { t } = useTerms();
 const showRestock = ref(false);
 const showWriteOff = ref(false);
 

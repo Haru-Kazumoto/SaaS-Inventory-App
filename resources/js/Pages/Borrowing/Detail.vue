@@ -14,7 +14,7 @@
                         Kembali
                     </n-button>
                     <n-button
-                        v-if="!isCompleted"
+                        v-if="!isCompleted && canOperate"
                         type="primary"
                         class="flex-1 sm:flex-none"
                         @click="goReturn"
@@ -158,7 +158,7 @@
                                         >
                                         <span
                                             class="ml-1 text-[11px] text-slate-400"
-                                            >{{ row.unit_name ?? "" }}</span
+                                            >{{ row.uom_name ?? "" }}</span
                                         >
                                     </td>
                                 </tr>
@@ -210,7 +210,7 @@
                                     >{{ row.quantity }}</span
                                 >
                                 <span class="ml-1 text-[11px] text-slate-400">{{
-                                    row.unit_name ?? ""
+                                    row.uom_name ?? ""
                                 }}</span>
                             </div>
                         </li>
@@ -313,8 +313,8 @@
                             <span class="font-semibold text-slate-700">{{
                                 tx.created_by_name || "-"
                             }}</span>
-                            <template v-if="tx.created_by_role">
-                                ({{ tx.created_by_role }})</template
+                            <template v-if="tx.unit_name">
+                                ({{ tx.unit_name }})</template
                             >
                             pada
                             <span class="tabular-nums">{{ createdAtLabel }}</span>.
@@ -327,6 +327,8 @@
 </template>
 
 <script setup lang="ts">
+import { useTerms } from "@/Composables/useTerms";
+import { useFlash } from "@/Composables/useFlash";
 import { computed, PropType } from "vue";
 import { router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
@@ -350,14 +352,20 @@ defineOptions({ layout: AuthenticatedLayout });
 
 interface TxHeader {
     id: number | string;
+    unit_name?: string | null;
     tx_number?: string | null;
     tx_type: string;
     status: string;
     borrower_id?: number | null;
     borrower_name?: string | null;
     borrower_phone?: string | null;
-    borrower_room?: string | null;
-    borrower_supervisor?: string | null;
+    usage_location?: string | null;
+    responsible_name?: string | null;
+    identity_number?: string | null;
+    uom_name?: string | null;
+    returned_qty?: number;
+    outstanding?: number;
+    due_at?: string | null;
     description?: string | null;
     occurred_at?: string | null;
     created_at: string;
@@ -365,7 +373,6 @@ interface TxHeader {
     due_date?: string | null;
     created_by?: number | null;
     created_by_name?: string | null;
-    created_by_role?: string | null;
 }
 
 interface BorrowItem {
@@ -374,7 +381,9 @@ interface BorrowItem {
     product_name: string;
     product_code: string;
     quantity: number;
-    unit_name?: string | null;
+    uom_name?: string | null;
+    returned_qty?: number;
+    outstanding?: number;
     warehouse_id?: number | null;
     warehouse_name?: string | null;
     condition_from?: string | null;
@@ -389,10 +398,14 @@ const props = defineProps({
         type: Object as PropType<{ total_lines: number; total_qty: number }>,
         required: false,
     },
+    canOperate: { type: Boolean, default: false },
 });
 
 const tx = computed(() => props.transaction);
 const lines = computed(() => props.lines ?? []);
+
+const { t } = useTerms();
+useFlash();
 
 const isCompleted = computed(() =>
     ["COMPLETED", "RETURNED"].includes((tx.value.status || "").toUpperCase()),
@@ -424,16 +437,17 @@ const borrowerInfo = computed(() => {
     const phoneDigits = (tx.value.borrower_phone || "").replace(/\D/g, "");
     return [
         { label: "Nama", value: tx.value.borrower_name || "-" },
+        { label: t("borrower_id_label"), value: tx.value.identity_number || "-" },
         {
             label: "Nomor telepon",
             value: formatPhone(tx.value.borrower_phone),
             href: phoneDigits ? `tel:${phoneDigits}` : undefined,
             mono: true,
         },
-        { label: "Ruangan", value: tx.value.borrower_room || "-" },
+        { label: "Lokasi pemakaian", value: tx.value.usage_location || "-" },
         {
-            label: "Pengawas ruangan",
-            value: tx.value.borrower_supervisor || "-",
+            label: "Penanggung jawab",
+            value: tx.value.responsible_name || "-",
         },
     ];
 });
@@ -443,7 +457,7 @@ function goBack() {
 }
 
 function goReturn() {
-    router.visit(route("borrowing.returning", tx.value.id));
+    router.visit(route("borrowing.return", tx.value.id));
 }
 </script>
 

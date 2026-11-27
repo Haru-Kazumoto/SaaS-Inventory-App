@@ -5,8 +5,8 @@ export interface OutgoingLine {
     product_code: string;
     warehouse_name?: string | null;
     outstanding_qty: number;
-    unit_name: string;
-    sub_type_name: string;
+    uom_name?: string | null;
+    category_name?: string | null;
     borrowed_at?: string;
     created_at?: string;
 }

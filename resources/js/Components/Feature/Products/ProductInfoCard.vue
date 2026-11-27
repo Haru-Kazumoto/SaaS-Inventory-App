@@ -26,7 +26,7 @@
                 </div>
             </div>
             <RefreshButton
-                :refreshProps="['warehouse_products', 'product']"
+                :refreshProps="['stock', 'product', 'warehouses']"
                 size="medium"
             />
         </div>
@@ -78,7 +78,7 @@
                         <span
                             class="text-sm font-medium text-slate-600"
                         >
-                            {{ product.sub_type_name ?? "-" }}
+                            {{ product.category_name ?? "-" }}
                         </span>
                     </DescField>
 
@@ -86,7 +86,7 @@
                         <span
                             class="text-sm font-medium text-slate-700"
                         >
-                            {{ product.unit_name ?? "-" }}
+                            {{ product.uom_name ?? "-" }}
                         </span>
                     </DescField>
 
@@ -100,7 +100,7 @@
                         <span
                             class="text-sm font-medium text-slate-600"
                         >
-                            {{ formatDate(product.labeling_date) }}
+                            {{ formatDate(product.labeling_date ?? '') }}
                         </span>
                     </DescField>
 
@@ -108,7 +108,7 @@
                         <span
                             class="text-sm tabular-nums text-slate-600"
                         >
-                            {{ formatDate(product.created_at) }}
+                            {{ formatDate(product.created_at ?? '') }}
                         </span>
                     </DescField>
                 </div>
@@ -123,11 +123,11 @@
                 </span>
 
                 <div
-                    v-if="product.image_product"
+                    v-if="product.image_url"
                     class="flex aspect-square max-h-64 items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-50"
                 >
                     <n-image
-                        :src="product.image_product"
+                        :src="product.image_url"
                         alt="Gambar Barang"
                         object-fit="contain"
                         class="h-full w-full"

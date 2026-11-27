@@ -7,6 +7,7 @@
         >
             <template #action>
                 <CreateButton
+                    v-if="canCreate"
                     @createRoute="createRoute"
                     buttonText="Buat Peminjaman"
                     class="w-full sm:w-auto"
@@ -117,9 +118,9 @@
                                     <p
                                         class="mt-0.5 truncate text-xs text-slate-500"
                                     >
-                                        {{ row.borrower_room || "-" }}
+                                        {{ row.usage_location || "-" }}
                                         <span class="text-slate-300">·</span>
-                                        {{ row.borrower_supervisor || "-" }}
+                                        {{ row.responsible_name || "-" }}
                                     </p>
                                 </div>
                             </div>
@@ -261,7 +262,6 @@ import { PaginationResponse } from "@/types/global-object";
 import {
     ArrowReply20Regular,
     Search20Regular,
-    ArrowBetweenDown20,
     Open48Filled,
 } from "@vicons/fluent";
 
@@ -272,13 +272,18 @@ defineOptions({
 interface Transaction {
     id: number;
     borrower_name: string;
-    borrower_supervisor: string;
+    responsible_name: string | null;
     borrower_phone: string;
-    borrower_room: string;
+    usage_location: string | null;
+    identity_number?: string | null;
+    tx_number: string;
+    unit_name?: string | null;
+    due_at?: string | null;
+    is_overdue?: boolean;
+    can_operate?: boolean;
     description: string;
     created_at: string;
     creator_name: string;
-    creator_role: string;
     products_count: number;
     computed_status: string;
 }
@@ -288,6 +293,7 @@ const props = defineProps({
         type: Object as PropType<PaginationResponse<Transaction>>,
         required: true,
     },
+    canCreate: { type: Boolean, default: false },
 });
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -321,7 +327,7 @@ function goDetail(row: Transaction) {
 
 function goReturn(row: Transaction) {
     loading.value = true;
-    router.visit(route("borrowing.returning", row.id), {
+    router.visit(route("borrowing.return", row.id), {
         onFinish: () => (loading.value = false),
     });
 }
@@ -426,16 +432,16 @@ function createColumns(): DataTableColumns<Transaction> {
         },
         {
             title: "Ruangan",
-            key: "borrower_room",
+            key: "usage_location",
             minWidth: 170,
             render(row) {
                 return h("div", { class: "flex flex-col" }, [
                     h(
                         "span",
                         { class: "text-xs font-medium text-slate-700" },
-                        row.borrower_room || "-",
+                        row.usage_location || "-",
                     ),
-                    muted(`Pengawas: ${row.borrower_supervisor || "-"}`),
+                    muted(`Penanggung jawab: ${row.responsible_name || "-"}`),
                 ]);
             },
         },

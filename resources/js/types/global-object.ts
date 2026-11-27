@@ -26,11 +26,13 @@ export interface Major {
     code: string;
 }
 
+/** Gudang yang bisa dipakai satu barang, beserta saldo barang tersebut di gudang itu. */
 export interface Warehouse {
     id: number;
     name: string;
-    code: string;
-    major: Major;
+    current_quantity?: number;
+    good_quantity?: number;
+    damaged_quantity?: number;
 }
 
 export interface Item {
@@ -71,16 +73,18 @@ export interface Product {
     id: number;
     name: string;
     code: string;
-    brand_name?: string;
+    brand_name?: string | null;
     type: "DURABLE" | "CONSUMABLE";
     price: number;
-    labeling_date: string;
-    warehouse_name: string;
-    sub_type_name: string;
-    unit_name: string;
-    image_product: string;
-    major_name: string;
-    created_at: string;
+    labeling_date?: string | null;
+    created_at?: string | null;
+    unit_id: number;
+    /** unit organisasi pemilik (Jurusan/Divisi/...) */
+    unit_name?: string | null;
+    category_name?: string | null;
+    /** satuan barang (PCS, BOX, ...) */
+    uom_name?: string | null;
+    image_url?: string | null;
     good_qty: number;
     damaged_qty: number;
     out_qty: number;
@@ -89,6 +93,7 @@ export interface Product {
 }
 
 export interface WarehouseProduct {
+    warehouse_id?: number;
     condition: string;
     warehouse_name: string;
     on_hand: number;

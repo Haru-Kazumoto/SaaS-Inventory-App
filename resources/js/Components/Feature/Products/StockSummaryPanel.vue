@@ -32,21 +32,21 @@
                 :icon="BoxMultiple24Regular"
                 label="Dalam gudang"
                 :count="product.usable_qty"
-                :unit="product.unit_name"
+                :unit="product.uom_name ?? ''"
                 color="blue"
             />
             <StockStatCard
                 :icon="BoxCheckmark24Regular"
                 label="Kondisi bagus"
                 :count="product.good_qty"
-                :unit="product.unit_name"
+                :unit="product.uom_name ?? ''"
                 color="green"
             />
             <StockStatCard
                 :icon="BoxDismiss20Regular"
                 label="Kondisi rusak"
                 :count="product.damaged_qty"
-                :unit="product.unit_name"
+                :unit="product.uom_name ?? ''"
                 color="red"
             />
             <template v-if="product.type === 'DURABLE'">
@@ -54,14 +54,14 @@
                     :icon="BoxArrowUp24Regular"
                     label="Sedang dipinjam"
                     :count="product.out_qty"
-                    :unit="product.unit_name"
+                    :unit="product.uom_name ?? ''"
                     color="amber"
                 />
                 <StockStatCard
                     :icon="BookToolbox20Regular"
                     label="Dihapuskan"
                     :count="product.off_qty"
-                    :unit="product.unit_name"
+                    :unit="product.uom_name ?? ''"
                     color="gray"
                 />
             </template>

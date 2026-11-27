@@ -34,9 +34,9 @@
                                 {{ tx.borrower_name || "-" }}
                             </p>
                             <p class="mt-0.5 text-xs text-slate-500">
-                                {{ tx.borrower_room || "-" }}
+                                {{ tx.usage_location || "-" }}
                                 <span class="text-slate-300">·</span>
-                                Pengawas: {{ tx.borrower_supervisor || "-" }}
+                                Penanggung jawab: {{ tx.responsible_name || "-" }}
                             </p>
                         </div>
                         <span
@@ -126,7 +126,7 @@
                     <ul v-if="durableRows.length" class="divide-y divide-slate-100">
                         <li
                             v-for="row in durableRows"
-                            :key="row.line_id"
+                            :key="row.id"
                             class="relative px-4 py-4 transition-colors duration-150 sm:px-5"
                             :class="[
                                 row.outstanding === 0 ? 'bg-slate-50/60' : '',
@@ -176,13 +176,13 @@
                                             <div
                                                 class="bg-emerald-500 transition-all duration-200"
                                                 :style="{
-                                                    width: pct(row.returned_qty, row.borrowed_qty),
+                                                    width: pct(row.returned_qty, row.quantity),
                                                 }"
                                             ></div>
                                             <div
                                                 class="bg-[#2A126C]/60 transition-all duration-200"
                                                 :style="{
-                                                    width: pct(row.return_qty ?? 0, row.borrowed_qty),
+                                                    width: pct(row.return_qty ?? 0, row.quantity),
                                                 }"
                                             ></div>
                                         </div>
@@ -191,7 +191,7 @@
                                         >
                                             <span>
                                                 Dipinjam
-                                                <b class="text-slate-700">{{ row.borrowed_qty }}</b>
+                                                <b class="text-slate-700">{{ row.quantity }}</b>
                                             </span>
                                             <span>
                                                 Sudah kembali
@@ -200,7 +200,7 @@
                                             <span>
                                                 Sisa
                                                 <b class="text-amber-700">{{ row.outstanding }}</b>
-                                                {{ row.unit_name ?? "" }}
+                                                {{ row.uom_name ?? "" }}
                                             </span>
                                         </div>
                                     </div>
@@ -213,12 +213,12 @@
                                 >
                                     <div class="flex flex-col gap-1">
                                         <label
-                                            :for="`qty-${row.line_id}`"
+                                            :for="`qty-${row.id}`"
                                             class="eyebrow"
                                             >Jumlah kembali</label
                                         >
                                         <n-input-number
-                                            :input-props="{ id: `qty-${row.line_id}` }"
+                                            :input-props="{ id: `qty-${row.id}` }"
                                             :value="row.return_qty"
                                             :min="0"
                                             :max="row.outstanding"
@@ -310,7 +310,7 @@
                     >
                         <li
                             v-for="row in consumableRows"
-                            :key="row.line_id"
+                            :key="row.id"
                             class="flex items-center gap-3 px-4 py-3 sm:px-5"
                         >
                             <div class="min-w-0 flex-1">
@@ -322,9 +322,9 @@
                                 </p>
                             </div>
                             <span class="shrink-0 text-sm font-semibold tabular-nums text-slate-700">
-                                {{ row.borrowed_qty }}
+                                {{ row.quantity }}
                                 <span class="text-[11px] font-normal text-slate-400">{{
-                                    row.unit_name ?? ""
+                                    row.uom_name ?? ""
                                 }}</span>
                             </span>
                         </li>
@@ -446,7 +446,7 @@
             >
                 <li
                     v-for="r in selectedRows"
-                    :key="r.line_id"
+                    :key="r.id"
                     class="flex items-center justify-between gap-3 px-3 py-2"
                 >
                     <span class="min-w-0 truncate text-xs text-slate-700">{{
@@ -464,7 +464,7 @@
                             {{ r.to_condition === "DAMAGED" ? "Rusak" : "Bagus" }}
                         </span>
                         <span class="text-xs font-semibold tabular-nums text-slate-900">
-                            {{ r.return_qty }} {{ r.unit_name ?? "" }}
+                            {{ r.return_qty }} {{ r.uom_name ?? "" }}
                         </span>
                     </span>
                 </li>
@@ -507,10 +507,9 @@ interface TxHeader {
     id: number;
     tx_number?: string | null;
     borrower_name?: string | null;
-    borrower_supervisor?: string | null;
-    borrower_room?: string | null;
     borrower_phone?: string | null;
-    borrower_id: number;
+    responsible_name?: string | null;
+    usage_location?: string | null;
     occurred_at?: string | null;
     created_at?: string | null;
     description?: string | null;
@@ -518,32 +517,28 @@ interface TxHeader {
 
 type Condition = "GOOD" | "DAMAGED";
 
+/** Baris pinjaman (id = id baris pinjam) beserta sisa yang bisa dikembalikan. */
 interface LineEnriched {
-    line_id: number;
-    line_no: number;
+    id: number;
     product_id: number;
     product_code: string;
     product_name: string;
     product_type: string;
-    is_consumable: boolean | number;
+    is_consumable: boolean;
     warehouse_id: number;
     warehouse_name: string;
-    unit_name?: string | null;
-    borrowed_qty: number;
+    uom_name?: string | null;
+    quantity: number;
     returned_qty: number;
     outstanding: number;
-    condition_from: Condition;
 }
 
 const props = defineProps({
     transaction: { type: Object as PropType<TxHeader>, required: true },
     lines: { type: Array as PropType<LineEnriched[]>, required: true },
-    warehouseOptions: {
+    /** gudang tujuan pengembalian (milik unit + bersama) */
+    warehouses: {
         type: Array as PropType<Array<{ label: string; value: number }>>,
-        required: true,
-    },
-    conditionOptions: {
-        type: Array as PropType<Array<{ label: string; value: Condition }>>,
         required: true,
     },
 });
@@ -602,7 +597,7 @@ const conditionChoices: Array<{
 const sum = (list: RowState[], pick: (r: RowState) => number) =>
     list.reduce((s, r) => s + (Number(pick(r)) || 0), 0);
 
-const totalBorrowed = computed(() => sum(durableRows.value, (r) => r.borrowed_qty));
+const totalBorrowed = computed(() => sum(durableRows.value, (r) => r.quantity));
 const totalReturned = computed(() => sum(durableRows.value, (r) => r.returned_qty));
 const totalOutstanding = computed(() => sum(durableRows.value, (r) => r.outstanding));
 const totalReturnQty = computed(() =>
@@ -643,16 +638,9 @@ const showConfirm = ref(false);
 const submitting = ref(false);
 
 function goBack() {
-    router.visit(route("borrowing.index"));
+    router.visit(route("borrowing.show", tx.value.id));
 }
 
-function toDateTimeLocal(ts: number) {
-    const d = new Date(ts);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-        d.getDate(),
-    )} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
-}
 
 function askConfirm() {
     if (!canSubmit.value) {
@@ -671,35 +659,22 @@ function askConfirm() {
 
 function submit() {
     const lines = selectedRows.value.map((r) => ({
-        product_id: r.product_id,
-        to_warehouse_id: r.to_warehouse_id,
-        to_condition: r.to_condition,
+        borrow_line_id: r.id,
         quantity: Number(r.return_qty),
-        line_no: r.line_no,
+        condition: r.to_condition,
+        warehouse_id: r.to_warehouse_id,
     }));
 
     submitting.value = true;
     router.post(
-        route("borrowing.returnBorrow"),
-        {
-            borrow_tx_id: tx.value.id,
-            occurred_at: toDateTimeLocal(Date.now()),
-            lines,
-            borrower_id: tx.value.borrower_id,
-        },
+        route("borrowing.return.store", tx.value.id),
+        { lines },
         {
             preserveScroll: true,
-            onSuccess: () => {
-                showConfirm.value = false;
-                message.success("Pengembalian tersimpan");
-            },
+            onSuccess: () => (showConfirm.value = false),
             onError: (errors) => {
                 const first = Object.values(errors)[0];
-                message.error(
-                    typeof first === "string"
-                        ? first
-                        : "Gagal menyimpan pengembalian",
-                );
+                message.error(typeof first === "string" ? first : "Gagal menyimpan pengembalian");
             },
             onFinish: () => (submitting.value = false),
         },

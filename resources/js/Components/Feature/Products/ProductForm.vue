@@ -19,6 +19,21 @@
                 >
                     <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
                         <n-form-item
+                            v-if="units.length > 1 || mode === 'edit'"
+                            :label="`${t('unit')} pemilik`"
+                            path="unit_id"
+                            class="sm:col-span-2"
+                            v-bind="serverError('unit_id')"
+                        >
+                            <n-select
+                                :value="form.unit_id"
+                                :options="unitSelectOptions"
+                                :placeholder="`Pilih ${t('unit').toLowerCase()}`"
+                                @update:value="onUnitChange"
+                            />
+                        </n-form-item>
+
+                        <n-form-item
                             label="Nama barang"
                             path="name"
                             class="sm:col-span-2"
@@ -110,20 +125,20 @@
                             </div>
                         </n-form-item>
 
-                        <n-form-item label="Kategori" path="sub_type_code" v-bind="serverError('sub_type_code')">
+                        <n-form-item label="Kategori" path="category_id" v-bind="serverError('category_id')">
                             <n-select
-                                v-model:value="form.sub_type_code"
-                                :options="subTypeOptions"
+                                v-model:value="form.category_id"
+                                :options="categoryOptions"
                                 placeholder="Pilih kategori"
                                 filterable
                                 clearable
                             />
                         </n-form-item>
 
-                        <n-form-item label="Satuan" path="unit_code" v-bind="serverError('unit_code')">
+                        <n-form-item label="Satuan" path="uom_id" v-bind="serverError('uom_id')">
                             <n-select
-                                v-model:value="form.unit_code"
-                                :options="unitOptions"
+                                v-model:value="form.uom_id"
+                                :options="uomOptions"
                                 placeholder="Pilih satuan (pcs, unit, dll)"
                                 filterable
                                 clearable
@@ -480,26 +495,31 @@ import {
     Save20Regular,
 } from "@vicons/fluent";
 import FormSection from "@/Components/FormSection.vue";
+import { useTerms } from "@/Composables/useTerms";
 import type { ProductFormPayload } from "./product-form";
 
 type Condition = "GOOD" | "DAMAGED";
 
+interface Option {
+    id: number;
+    name: string;
+    unit_id?: number | null;
+}
+
 const props = withDefaults(
     defineProps<{
         mode: "create" | "edit";
-        units: Array<{ name: string; code: string }>;
-        subTypes: Array<{ name: string; code: string }>;
-        warehouses: Array<{ id: number; name: string }>;
+        /** unit yang boleh dikelola user */
+        units: Array<{ id: number; name: string }>;
+        categories: Option[];
+        uoms: Option[];
+        warehouses: Option[];
         product?: Record<string, any> | null;
-        quantities?: Array<{
-            warehouse_id: number;
-            warehouse_name: string;
-            on_hand: number | string;
-            condition: string | null;
-        }>;
+        /** saldo stok saat ini (mode edit) */
+        stock?: Array<{ warehouse_id: number; warehouse_name: string; on_hand: number | string; condition: string | null }>;
         processing?: boolean;
     }>(),
-    { product: null, quantities: () => [], processing: false },
+    { product: null, stock: () => [], processing: false },
 );
 
 const emit = defineEmits<{
@@ -529,15 +549,18 @@ const CONDITIONS: Array<{ value: Condition; label: string; active: string }> = [
     { value: "DAMAGED", label: "Rusak", active: "bg-rose-600 text-white" },
 ];
 
-const unitOptions = computed(() =>
-    props.units.map((u) => ({ label: u.name, value: u.code })),
-);
-const subTypeOptions = computed(() =>
-    props.subTypes.map((s) => ({ label: s.name, value: s.code })),
-);
-const warehouseOptions = computed(() =>
-    props.warehouses.map((w) => ({ label: w.name, value: w.id })),
-);
+const { t } = useTerms();
+
+/** data bersama (unit_id null) atau milik unit terpilih */
+const forUnit = (list: Option[]) =>
+    list
+        .filter((o) => o.unit_id == null || o.unit_id === form.unit_id)
+        .map((o) => ({ label: o.name, value: o.id }));
+
+const unitSelectOptions = computed(() => props.units.map((u) => ({ label: u.name, value: u.id })));
+const categoryOptions = computed(() => forUnit(props.categories));
+const uomOptions = computed(() => forUnit(props.uoms));
+const warehouseOptions = computed(() => forUnit(props.warehouses));
 
 /* ---------------- State form ---------------- */
 const p = props.product ?? {};
@@ -556,26 +579,37 @@ const form = reactive({
         : props.mode === "create"
           ? todayStr
           : null,
-    sub_type_code: (p.sub_type_code as string) ?? null,
-    unit_code: (p.unit_code as string) ?? null,
+    unit_id: (p.unit_id as number | null) ?? (props.units.length === 1 ? props.units[0].id : null),
+    category_id: (p.category_id as number | null) ?? null,
+    uom_id: (p.uom_id as number | null) ?? null,
 });
+
+/** Ganti unit: kosongkan pilihan yang bukan milik unit baru. */
+function onUnitChange(v: number) {
+    form.unit_id = v;
+    const ok = (list: Option[], id: number | null) => list.some((o) => o.id === id && (o.unit_id == null || o.unit_id === v));
+    if (!ok(props.categories, form.category_id)) form.category_id = null;
+    if (!ok(props.uoms, form.uom_id)) form.uom_id = null;
+    items.value.forEach((r) => {
+        if (!r.locked && !ok(props.warehouses, r.warehouse_id)) {
+            r.warehouse_id = null;
+            r.warehouse_name = null;
+        }
+    });
+}
 
 const rules: FormRules = {
     name: { required: true, message: "Nama barang wajib diisi", trigger: ["blur", "input"] },
     code: { required: true, message: "Kode barang wajib diisi", trigger: ["blur", "input"] },
     type: { required: true, key: "type", message: "Pilih tipe barang", trigger: ["change"] },
-    sub_type_code: { required: true, message: "Pilih kategori", trigger: ["change", "blur"] },
-    unit_code: { required: true, message: "Pilih satuan", trigger: ["change", "blur"] },
+    unit_id: { required: true, type: "number", message: "Pilih unit pemilik", trigger: ["change", "blur"] },
+    category_id: { required: true, type: "number", message: "Pilih kategori", trigger: ["change", "blur"] },
+    uom_id: { required: true, type: "number", message: "Pilih satuan", trigger: ["change", "blur"] },
     price: {
         required: true,
         trigger: ["blur", "input"],
         validator: () =>
             form.price == null ? new Error("Harga wajib diisi (boleh 0)") : true,
-    },
-    labeling_date: {
-        required: true,
-        message: "Tanggal pelabelan wajib diisi",
-        trigger: ["change", "blur"],
     },
 };
 
@@ -602,7 +636,7 @@ function onPriceInput(v: string) {
 }
 
 /* ---------------- Gambar ---------------- */
-const initialImage = (p.image_product as string) || null;
+const initialImage = (p.image_url as string) || null;
 const imageFile = ref<File | null>(null);
 const imagePreview = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -661,15 +695,15 @@ let keySeq = 0;
 const newRow = (): Row => ({
     key: ++keySeq,
     status: "GOOD",
-    warehouse_id: props.warehouses.length === 1 ? props.warehouses[0].id : null,
-    warehouse_name: props.warehouses.length === 1 ? props.warehouses[0].name : null,
+    warehouse_id: warehouseOptions.value.length === 1 ? (warehouseOptions.value[0].value as number) : null,
+    warehouse_name: warehouseOptions.value.length === 1 ? warehouseOptions.value[0].label : null,
     quantity: null,
     locked: false,
 });
 
 const items = ref<Row[]>(
-    props.quantities.length
-        ? props.quantities.map((q) => ({
+    props.stock.length
+        ? props.stock.map((q) => ({
               key: ++keySeq,
               status: q.condition,
               warehouse_id: q.warehouse_id,
@@ -716,16 +750,16 @@ const totalQuantity = computed(() =>
 const labelOf = (opts: { label: string; value: unknown }[], v: unknown) =>
     opts.find((o) => o.value === v)?.label ?? null;
 
-const unitLabel = computed(() => labelOf(unitOptions.value, form.unit_code));
+const unitLabel = computed(() => labelOf(uomOptions.value, form.uom_id));
 
 const checklist = computed(() => [
     { label: "Nama", done: !!form.name },
     { label: "Kode", done: !!form.code },
     { label: "Tipe", done: !!form.type },
-    { label: "Kategori", done: !!form.sub_type_code },
-    { label: "Satuan", done: !!form.unit_code },
+    { label: t("unit"), done: !!form.unit_id },
+    { label: "Kategori", done: !!form.category_id },
+    { label: "Satuan", done: !!form.uom_id },
     { label: "Harga", done: form.price != null },
-    { label: "Tgl. pelabelan", done: !!form.labeling_date },
     {
         label: "Stok gudang",
         done: items.value.every((r) => r.locked || (r.warehouse_id && r.quantity != null)),
@@ -738,7 +772,7 @@ const summary = computed(() => [
         label: "Tipe",
         value: TYPE_OPTIONS.find((t) => t.value === form.type)?.label ?? "-",
     },
-    { label: "Kategori", value: labelOf(subTypeOptions.value, form.sub_type_code) ?? "-" },
+    { label: "Kategori", value: labelOf(categoryOptions.value, form.category_id) ?? "-" },
     {
         label: "Harga satuan",
         value: form.price == null ? "-" : `Rp ${priceDisplay.value}`,
@@ -786,22 +820,19 @@ async function submit() {
     }
 
     emit("submit", {
+        unit_id: form.unit_id,
         name: form.name,
         code: form.code,
         brand_name: form.brand_name ?? "",
         type: form.type ?? "",
         price: form.price,
         labeling_date: form.labeling_date,
-        warehouse_code: null,
-        sub_type_code: form.sub_type_code,
-        unit_code: form.unit_code,
-        image_product: imageFile.value,
-        quantities: items.value.map(({ status, warehouse_id, warehouse_name, quantity }) => ({
-            status,
-            warehouse_id,
-            warehouse_name,
-            quantity,
-        })),
+        category_id: form.category_id,
+        uom_id: form.uom_id,
+        image: imageFile.value,
+        stock: items.value
+            .filter((r) => !r.locked && r.warehouse_id)
+            .map((r) => ({ warehouse_id: r.warehouse_id, condition: r.status, quantity: r.quantity ?? 0 })),
     });
 }
 

@@ -2,7 +2,7 @@
     <div class="flex flex-col gap-5">
         <TitlePage eyebrow="Manajemen Data" :title="title" :subTitle="subtitle">
             <template #action>
-                <n-button type="primary" class="w-full sm:w-auto" @click="openCreate">
+                <n-button v-if="canCreate" type="primary" class="w-full sm:w-auto" @click="openCreate">
                     <template #icon>
                         <n-icon :component="Add20Regular" />
                     </template>
@@ -15,12 +15,14 @@
             :data="filtered"
             :columns="columns"
             :get-row-id="(row) => String(row.id)"
-            :min-width="withDescription ? '760px' : '560px'"
+            min-width="720px"
             :empty-title="q ? 'Tidak ditemukan' : `Belum ada ${itemLabel.toLowerCase()}`"
             :empty-description="
                 q
                     ? `Tidak ada ${itemLabel.toLowerCase()} yang cocok dengan “${q}”.`
-                    : `Klik “Tambah ${itemLabel}” untuk membuat data pertama.`
+                    : canCreate
+                      ? `Klik “Tambah ${itemLabel}” untuk membuat data pertama.`
+                      : 'Belum ada data.'
             "
         >
             <template #toolbar>
@@ -50,16 +52,16 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-slate-900">{{ row.name }}</p>
-                            <p class="truncate font-mono text-[11px] text-slate-500">{{ row.code }}</p>
-                            <p
-                                v-if="withDescription && row.description"
-                                class="mt-1 line-clamp-2 text-xs text-slate-600"
-                            >
+                            <p class="truncate text-[11px] text-slate-500">
+                                <span class="font-mono">{{ row.code }}</span>
+                                <template v-if="ownerColumn"> · {{ row.unit_name ?? "Bersama" }}</template>
+                            </p>
+                            <p v-if="row.description" class="mt-1 line-clamp-2 text-xs text-slate-600">
                                 {{ row.description }}
                             </p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div v-if="row.can_edit" class="grid grid-cols-2 gap-2">
                         <n-button @click="openEdit(row)">
                             <template #icon><n-icon :component="Edit20Regular" /></template>
                             Edit
@@ -81,9 +83,9 @@
             :title="isEdit ? `Ubah ${itemLabel}` : `Tambah ${itemLabel}`"
             class="!w-[calc(100vw-2rem)] max-w-lg !rounded"
             :segmented="{ content: true, footer: true }"
-            :mask-closable="!processing"
+            :mask-closable="!form.processing"
         >
-            <p class="mb-4 text-xs leading-relaxed text-slate-500">
+            <p v-if="$slots.hint" class="mb-4 text-xs leading-relaxed text-slate-500">
                 <slot name="hint" />
             </p>
 
@@ -111,7 +113,7 @@
                         <n-input
                             :value="form.code"
                             :placeholder="`cth: ${examples.code}`"
-                            maxlength="100"
+                            maxlength="50"
                             @update:value="onCodeInput"
                             @keyup.enter="submitForm"
                         >
@@ -131,16 +133,25 @@
                 </n-form-item>
 
                 <n-form-item
-                    v-if="withDescription"
-                    label="Deskripsi"
-                    path="description"
-                    v-bind="fieldError('description')"
+                    v-if="ownerOptions.length"
+                    label="Pemilik data"
+                    path="unit_id"
+                    v-bind="fieldError('unit_id')"
                 >
+                    <n-select
+                        :value="form.unit_id"
+                        :options="ownerOptions as any"
+                        :disabled="isEdit"
+                        @update:value="(v) => (form.unit_id = v)"
+                    />
+                </n-form-item>
+
+                <n-form-item label="Deskripsi" path="description" v-bind="fieldError('description')">
                     <n-input
                         v-model:value="form.description"
                         type="textarea"
                         :autosize="{ minRows: 2, maxRows: 5 }"
-                        :placeholder="`Opsional, cth: ${examples.description ?? ''}`"
+                        :placeholder="`Opsional${examples.description ? `, cth: ${examples.description}` : ''}`"
                         maxlength="255"
                         show-count
                     />
@@ -149,8 +160,8 @@
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <n-button :disabled="processing" @click="showForm = false">Batal</n-button>
-                    <n-button type="primary" :loading="processing" @click="submitForm">
+                    <n-button :disabled="form.processing" @click="showForm = false">Batal</n-button>
+                    <n-button type="primary" :loading="form.processing" @click="submitForm">
                         {{ isEdit ? "Simpan Perubahan" : `Simpan ${itemLabel}` }}
                     </n-button>
                 </div>
@@ -165,7 +176,7 @@
             :title="`Hapus ${itemLabel}?`"
             class="!w-[calc(100vw-2rem)] max-w-md !rounded"
             :segmented="{ footer: true }"
-            :mask-closable="!processing"
+            :mask-closable="!deleting"
         >
             <div class="flex gap-3">
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-rose-50 text-rose-600">
@@ -178,17 +189,16 @@
                         akan dihapus permanen.
                     </p>
                     <p class="mt-1 text-xs text-slate-500">
-                        Pastikan tidak ada barang yang masih memakai {{ itemLabel.toLowerCase() }} ini.
+                        Data yang masih dipakai tidak bisa dihapus.
                     </p>
+                    <p v-if="deleteError" class="mt-2 text-xs font-medium text-rose-600">{{ deleteError }}</p>
                 </div>
             </div>
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <n-button :disabled="processing" @click="showDelete = false">Batal</n-button>
-                    <n-button type="error" :loading="processing" @click="confirmDelete">
-                        Ya, hapus
-                    </n-button>
+                    <n-button :disabled="deleting" @click="showDelete = false">Batal</n-button>
+                    <n-button type="error" :loading="deleting" @click="confirmDelete">Ya, hapus</n-button>
                 </div>
             </template>
         </n-modal>
@@ -206,7 +216,7 @@ import {
     NIcon,
     NInput,
     NModal,
-    useMessage,
+    NSelect,
     type FormInst,
     type FormRules,
     type InputInst,
@@ -224,21 +234,20 @@ import type { MasterRow } from "./types";
 
 const props = withDefaults(
     defineProps<{
+        /** jenis data master: units | warehouses | categories | uoms */
+        type: string;
         title: string;
         subtitle: string;
-        /** Nama singkat entitas, mis. "Satuan" */
         itemLabel: string;
         icon: Component;
         rows: MasterRow[];
-        /** Nama route Ziggy: { store, update, delete } */
-        routes: { store: string; update: string; delete: string };
-        withDescription?: boolean;
+        /** pilihan pemilik data (kosong = jenis tanpa pemilik, mis. unit) */
+        ownerOptions?: { label: string; value: number | null }[];
+        canCreate?: boolean;
         examples: { name: string; code: string; description?: string };
     }>(),
-    { withDescription: false },
+    { ownerOptions: () => [], canCreate: true },
 );
-
-const message = useMessage();
 
 /* ---------------- Pencarian ---------------- */
 const q = ref("");
@@ -246,34 +255,30 @@ const filtered = computed(() => {
     const s = q.value.trim().toLowerCase();
     if (!s) return props.rows;
     return props.rows.filter((r) =>
-        [r.name, r.code, r.description].some((v) => (v ?? "").toLowerCase().includes(s)),
+        [r.name, r.code, r.description, r.unit_name].some((v) => (v ?? "").toLowerCase().includes(s)),
     );
 });
 
+const ownerColumn = computed(() => props.ownerOptions.length > 0 || props.rows.some((r) => r.unit_name));
+
 /* ---------------- Form ---------------- */
-const form = useForm({ name: "", code: "", description: "" });
-const processing = computed(() => form.processing);
+const form = useForm({ name: "", code: "", description: "", unit_id: null as number | null });
 const formRef = ref<FormInst | null>(null);
 const nameInput = ref<InputInst | null>(null);
 const showForm = ref(false);
 const isEdit = ref(false);
 const selected = ref<MasterRow | null>(null);
-/** kode mengikuti nama sampai user mengubah kode sendiri */
 const codeAuto = ref(true);
 
-const toCode = (v: string) =>
-    v
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "_")
-        .replace(/^_+/, "");
+const toCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+/, "");
 
 function onNameInput(v: string) {
-    form.name = v.toUpperCase();
+    form.name = v;
     if (codeAuto.value) form.code = toCode(v).replace(/_+$/, "");
 }
 function onCodeInput(v: string) {
     form.code = toCode(v);
-    codeAuto.value = form.code === "" ? true : false;
+    codeAuto.value = form.code === "";
 }
 
 const rules: FormRules = {
@@ -281,8 +286,8 @@ const rules: FormRules = {
     code: { required: true, message: "Kode wajib diisi", trigger: ["input", "blur"] },
 };
 
-function fieldError(field: "name" | "code" | "description") {
-    const msg = form.errors[field];
+function fieldError(field: string) {
+    const msg = (form.errors as Record<string, string>)[field];
     return msg ? { validationStatus: "error" as const, feedback: msg } : {};
 }
 
@@ -291,6 +296,7 @@ function openCreate() {
     selected.value = null;
     form.reset();
     form.clearErrors();
+    form.unit_id = (props.ownerOptions[0]?.value ?? null) as number | null;
     codeAuto.value = true;
     showForm.value = true;
     nextTick(() => nameInput.value?.focus());
@@ -303,13 +309,14 @@ function openEdit(row: MasterRow) {
     form.name = row.name ?? "";
     form.code = row.code ?? "";
     form.description = row.description ?? "";
+    form.unit_id = row.unit_id ?? null;
     codeAuto.value = false;
     showForm.value = true;
     nextTick(() => nameInput.value?.focus());
 }
 
 async function submitForm() {
-    if (processing.value) return;
+    if (form.processing) return;
     try {
         await formRef.value?.validate();
     } catch {
@@ -317,43 +324,34 @@ async function submitForm() {
     }
     form.code = form.code.replace(/_+$/, "");
 
-    const options = {
-        preserveScroll: true,
-        onSuccess: () => {
-            message.success(
-                isEdit.value ? `${props.itemLabel} berhasil diperbarui` : `${props.itemLabel} berhasil ditambahkan`,
-            );
-            showForm.value = false;
-        },
-        onError: () => message.error("Periksa kembali data yang diisi."),
-    };
+    const options = { preserveScroll: true, onSuccess: () => (showForm.value = false) };
 
     if (isEdit.value && selected.value) {
-        form.put(route(props.routes.update, selected.value.id), options);
+        form.put(route("master-data.update", { type: props.type, id: selected.value.id }), options);
     } else {
-        form.post(route(props.routes.store), options);
+        form.post(route("master-data.store", props.type), options);
     }
 }
 
 /* ---------------- Hapus ---------------- */
 const showDelete = ref(false);
+const deleting = ref(false);
+const deleteError = ref<string | null>(null);
 
 function openDelete(row: MasterRow) {
     selected.value = row;
+    deleteError.value = null;
     showDelete.value = true;
 }
 
 function confirmDelete() {
     if (!selected.value) return;
-    form.processing = true;
-    router.delete(route(props.routes.delete, selected.value.id), {
+    router.delete(route("master-data.destroy", { type: props.type, id: selected.value.id }), {
         preserveScroll: true,
-        onSuccess: () => {
-            showDelete.value = false;
-            message.success(`${props.itemLabel} berhasil dihapus`);
-        },
-        onError: () => message.error(`Gagal menghapus ${props.itemLabel.toLowerCase()}.`),
-        onFinish: () => (form.processing = false),
+        onStart: () => (deleting.value = true),
+        onFinish: () => (deleting.value = false),
+        onSuccess: () => (showDelete.value = false),
+        onError: (errors) => (deleteError.value = (errors as Record<string, string>).delete ?? "Gagal menghapus data."),
     });
 }
 
@@ -366,8 +364,7 @@ const columns = computed(() => {
             id: "index",
             header: "#",
             meta: { width: "52px", align: "center" },
-            cell: ({ row }) =>
-                h("span", { class: "text-xs tabular-nums text-slate-400" }, row.index + 1),
+            cell: ({ row }) => h("span", { class: "text-xs tabular-nums text-slate-400" }, row.index + 1),
         }),
         col.accessor("name", {
             header: "Nama",
@@ -377,9 +374,7 @@ const columns = computed(() => {
                 h("div", { class: "flex items-center gap-2.5" }, [
                     h(
                         "div",
-                        {
-                            class: "flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#2A126C]/[0.06] text-[#2A126C]",
-                        },
+                        { class: "flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#2A126C]/[0.06] text-[#2A126C]" },
                         [h(NIcon, { component: props.icon, size: 16 })],
                     ),
                     h("span", { class: "truncate text-[13px] font-semibold text-slate-900" }, getValue()),
@@ -387,58 +382,67 @@ const columns = computed(() => {
         }),
         col.accessor("code", {
             header: "Kode",
-            meta: { width: "200px" },
+            meta: { width: "180px" },
             enableSorting: true,
             cell: ({ getValue }) =>
                 h(
                     "span",
-                    {
-                        class: "whitespace-nowrap rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-600",
-                    },
+                    { class: "whitespace-nowrap rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-600" },
                     getValue(),
                 ),
         }),
     ];
 
-    if (props.withDescription) {
+    if (ownerColumn.value) {
         list.push(
-            col.accessor("description", {
-                header: "Deskripsi",
-                meta: { minWidth: "220px" },
+            col.accessor("unit_name", {
+                header: "Pemilik",
+                meta: { width: "150px" },
+                enableSorting: true,
                 cell: ({ getValue }) =>
-                    h(
-                        "span",
-                        { class: "line-clamp-2 text-xs text-slate-600", title: getValue() || undefined },
-                        getValue() || "-",
-                    ),
+                    getValue()
+                        ? h("span", { class: "text-xs font-medium text-slate-700" }, getValue())
+                        : h("span", { class: "rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500" }, "Bersama"),
+            }),
+        );
+    }
+
+    if (props.rows.some((r) => r.members_count !== null && r.members_count !== undefined)) {
+        list.push(
+            col.accessor("members_count", {
+                header: "Anggota",
+                meta: { width: "100px", align: "right" },
+                cell: ({ getValue }) => h("span", { class: "text-sm tabular-nums text-slate-700" }, getValue() ?? 0),
             }),
         );
     }
 
     list.push(
+        col.accessor("description", {
+            header: "Deskripsi",
+            meta: { minWidth: "200px" },
+            cell: ({ getValue }) =>
+                h("span", { class: "line-clamp-2 text-xs text-slate-600", title: getValue() || undefined }, getValue() || "-"),
+        }),
         col.display({
             id: "action",
             header: "Aksi",
             meta: { width: "180px", align: "right", sticky: true },
             cell: ({ row }) =>
-                h("div", { class: "flex justify-end gap-1.5" }, [
-                    h(
-                        NButton,
-                        { size: "small", onClick: () => openEdit(row.original) },
-                        {
-                            icon: () => h(NIcon, null, { default: () => h(Edit20Regular) }),
-                            default: () => "Edit",
-                        },
-                    ),
-                    h(
-                        NButton,
-                        { size: "small", type: "error", ghost: true, onClick: () => openDelete(row.original) },
-                        {
-                            icon: () => h(NIcon, null, { default: () => h(Delete20Regular) }),
-                            default: () => "Hapus",
-                        },
-                    ),
-                ]),
+                row.original.can_edit
+                    ? h("div", { class: "flex justify-end gap-1.5" }, [
+                          h(
+                              NButton,
+                              { size: "small", onClick: () => openEdit(row.original) },
+                              { icon: () => h(NIcon, null, { default: () => h(Edit20Regular) }), default: () => "Edit" },
+                          ),
+                          h(
+                              NButton,
+                              { size: "small", type: "error", ghost: true, onClick: () => openDelete(row.original) },
+                              { icon: () => h(NIcon, null, { default: () => h(Delete20Regular) }), default: () => "Hapus" },
+                          ),
+                      ])
+                    : h("span", { class: "text-[11px] text-slate-400" }, "Hanya lihat"),
         }),
     );
 

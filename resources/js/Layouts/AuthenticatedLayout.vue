@@ -498,7 +498,7 @@ import {
     Navigation24Regular,
 } from "@vicons/fluent";
 import { Link, router, usePage } from "@inertiajs/vue3";
-import { menuOptions } from "@/Utils/menu-config";
+import { menuFor } from "@/Utils/menu-config";
 import Swal from "sweetalert2";
 import LoadingOverlay from "@/Components/LoadingOverlay.vue";
 
@@ -557,8 +557,11 @@ export default defineComponent({
             );
         });
 
-        const menu = computed(
-            () => menuOptions[userRole.value as string] || [],
+        const menu = computed(() =>
+            menuFor(userRole.value as string, {
+                unit: (page.props as any).organization?.terms?.unit ?? "Unit",
+                unit_plural: (page.props as any).organization?.terms?.unit_plural ?? "Unit",
+            }),
         );
 
         const activeMenu = ref(

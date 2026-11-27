@@ -14,11 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\ResolveOrganization::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->alias([
-            'if_authenticated' => \App\Http\Middleware\RedirectIfAuthenticated::class
+            'if_authenticated' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'platform' => \App\Http\Middleware\EnsurePlatformAdmin::class,
         ]);
 
         //

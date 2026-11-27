@@ -4,38 +4,50 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Organisasi (tenant) & pengguna.
+ *
+ * Akses pengguna:
+ * - is_platform_admin   → pengelola SaaS (area /platform), tidak terikat organisasi.
+ * - organization_role   → owner | admin (kelola seluruh organisasi) | member (akses lewat unit_members).
+ */
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('roles', function (Blueprint $table) {
+        Schema::create('organizations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('code');
+            $table->string('slug')->unique();
+            $table->enum('template', ['school', 'campus', 'office', 'community'])->default('school');
+            $table->enum('status', ['trial', 'active', 'past_due', 'suspended', 'cancelled'])->default('trial');
+            $table->json('settings')->nullable();          // terminologi, zona waktu, branding
+            $table->string('owner_name')->nullable();
+            $table->string('owner_email')->nullable();
+            $table->string('phone', 30)->nullable();
+            $table->text('address')->nullable();
+            $table->timestamp('trial_ends_at')->nullable();
+            $table->timestamp('suspended_at')->nullable();
+            $table->text('notes')->nullable();               // catatan internal platform
             $table->timestamps();
-        });
-
-        Schema::create('major', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('code');
-            $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('organization_id')->nullable()->constrained('organizations')->cascadeOnDelete();
+            $table->enum('organization_role', ['owner', 'admin', 'member'])->nullable();
+            $table->boolean('is_platform_admin')->default(false);
             $table->string('username')->unique();
             $table->string('fullname');
-            $table->string('phone');
+            $table->string('email')->nullable()->unique();
+            $table->string('phone', 30)->nullable();
             $table->string('password');
             $table->string('profile_image')->nullable();
-            $table->foreignId('role_id')->nullable()->constrained('roles')->nullOnDelete();
-            $table->foreignId('major_id')->nullable()->constrained('major')->nullOnDelete();
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index(['organization_id', 'organization_role']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -54,15 +66,11 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
-        Schema::dropIfExists('roles');
-        Schema::dropIfExists('major');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('organizations');
     }
 };

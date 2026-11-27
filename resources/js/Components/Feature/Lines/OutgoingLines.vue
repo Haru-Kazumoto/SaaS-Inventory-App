@@ -1,7 +1,7 @@
 <template>
     <div class="flex flex-col gap-5">
         <TitlePage
-            :eyebrow="`Pergerakan Barang${major ? ` · ${major.toUpperCase()}` : ''}`"
+            eyebrow="Pergerakan Barang"
             :title="isDurable ? 'Barang Keluar — Tidak Habis Pakai' : 'Barang Keluar — Habis Pakai'"
             :subTitle="
                 isDurable
@@ -102,7 +102,7 @@
                             "
                         >
                             {{ row.outstanding_qty }}
-                            <span class="text-[11px] font-normal opacity-70">{{ row.unit_name }}</span>
+                            <span class="text-[11px] font-normal opacity-70">{{ row.uom_name }}</span>
                         </span>
                     </div>
                     <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
@@ -147,13 +147,12 @@ const props = defineProps<{
     kind: "durable" | "consumable";
     lines: DataTablePagination & { data: OutgoingLine[] };
     warehouses?: Array<{ id: number; name: string }>;
-    major?: string;
 }>();
 
 const isDurable = computed(() => props.kind === "durable");
 
 const { filters, loading, apply, hasActive, reset } = useTableFilters(
-    props.kind === "durable" ? "lines.durable" : "lines.consumable",
+    props.kind === "durable" ? "movements.loaned" : "movements.consumed",
     {
         borrower_name: null as string | null,
         product_code: null as string | null,
@@ -189,7 +188,7 @@ const columns = computed(() => [
         header: "Barang",
         meta: { minWidth: "220px" },
         enableSorting: true,
-        cell: ({ row }) => productCell(row.original.product_name, row.original.sub_type_name),
+        cell: ({ row }) => productCell(row.original.product_name, row.original.category_name),
     }),
     col.accessor("product_code", {
         header: "Kode",
@@ -209,7 +208,7 @@ const columns = computed(() => [
         cell: ({ row }) =>
             qtyCell(
                 row.original.outstanding_qty,
-                row.original.unit_name,
+                row.original.uom_name,
                 isDurable.value ? "amber" : "slate",
             ),
     }),
